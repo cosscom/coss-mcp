@@ -77,6 +77,11 @@ export interface CossMcpServerOptions {
   coss?: Coss;
   /** The client's API key, only to tell live from sandbox keys (never sent anywhere else). */
   apiKey?: string;
+  /**
+   * The environment's mode when no API key carries it (an OIDC credential's client: `cli.ts`
+   * asks `GET /v1/environment` at start). Wins over `apiKey`'s prefix.
+   */
+  mode?: "live" | "sandbox";
   /** Where the docs tools read coss.com's docs (default: https://coss.com). */
   docs?: DocsOptions;
   /**
@@ -172,7 +177,7 @@ function instructions(mode: KeyMode, hosted: boolean): string {
 
 /** An MCP server exposing coss.com's tools over any transport (`coss-mcp` uses stdio). */
 export function createCossMcpServer(options: CossMcpServerOptions): McpServer {
-  const mode = keyMode(options.apiKey);
+  const mode = options.mode ?? keyMode(options.apiKey);
   const hosted = options.transport === "hosted";
   const server = new McpServer(
     { name: "coss", title: "coss.com", version: VERSION, websiteUrl: "https://coss.com/docs/mcp" },

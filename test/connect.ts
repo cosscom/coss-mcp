@@ -43,12 +43,14 @@ export async function connect(
   apiKey = "coss_live_test",
   projectDir?: string,
   toolsets?: readonly Toolset[],
+  mode?: "live" | "sandbox",
 ) {
   const api = fakeApi(routes);
   const coss = new Coss({ apiKey, baseUrl: "http://api.test", fetch: api.fetch, maxRetries: 0 });
   const server = createCossMcpServer({
     coss,
     apiKey,
+    ...(mode ? { mode } : {}),
     now: () => NOW,
     ...(projectDir ? { projectDir } : {}),
     ...(toolsets ? { toolsets } : {}),

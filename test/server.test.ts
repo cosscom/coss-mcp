@@ -22,6 +22,7 @@ describe("coss-mcp server", () => {
       "cancel_broadcast",
       "cancel_email",
       "cancel_scheduling_booking",
+      "cancel_scheduling_reassignment",
       "cancel_sign_request",
       "cancel_sms",
       "cancel_verification",
@@ -38,6 +39,8 @@ describe("coss-mcp server", () => {
       "create_inbox",
       "create_log_drain",
       "create_scheduling_booking",
+      "create_scheduling_out_of_office",
+      "create_scheduling_reassignment",
       "create_scheduling_session",
       "create_sign_request",
       "create_sign_request_from_template",
@@ -46,6 +49,7 @@ describe("coss-mcp server", () => {
       "create_subaccount",
       "create_webhook_endpoint",
       "delete_log_drain",
+      "delete_scheduling_out_of_office",
       "delete_subaccount",
       "diagnose_email",
       "diagnose_form_submission",
@@ -72,6 +76,7 @@ describe("coss-mcp server", () => {
       "get_risk_assessment",
       "get_risk_settings",
       "get_scheduling_booking",
+      "get_scheduling_reassignment",
       "get_scheduling_reminders",
       "get_setup",
       "get_sign_audit_trail",
@@ -110,6 +115,9 @@ describe("coss-mcp server", () => {
       "list_scheduling_calendars",
       "list_scheduling_event_types",
       "list_scheduling_hosts",
+      "list_scheduling_out_of_office",
+      "list_scheduling_out_of_office_conflicts",
+      "list_scheduling_reassign_candidates",
       "list_scheduling_schedules",
       "list_scheduling_slots",
       "list_segments",
@@ -123,10 +131,12 @@ describe("coss-mcp server", () => {
       "list_webhook_deliveries",
       "list_webhook_endpoints",
       "mark_scheduling_no_show",
+      "preview_scheduling_reassignment",
       "publish_email_template",
       "pull_email_template",
       "push_email_template",
       "read_docs",
+      "reassign_scheduling_booking",
       "record_risk_feedback",
       "reinstate_subaccount",
       "release_form_submission",
@@ -160,6 +170,7 @@ describe("coss-mcp server", () => {
       "send_sms",
       "send_test_broadcast",
       "start_verification",
+      "undo_scheduling_reassignment",
       "update_log_drain",
       "update_marketing_settings",
       "update_sign_settings",
@@ -460,6 +471,21 @@ describe("coss-mcp server", () => {
     expect(data.reputation.status).toBe("warning");
     expect(data.billing).toBeNull();
     expect(data.errors.billing.type).toBe("not_found_error");
+  });
+
+  test("an OIDC credential's client takes its mode from the environment, not a key prefix", async () => {
+    const routes = {
+      "GET /v1/environment": {
+        object: "environment",
+        mode: "live",
+        organization: { id: "org_1", hipaa_mode: false },
+        api_key: { id: "key_1", access: "full", permissions: [] },
+      },
+    };
+    const unknown = await connect(routes, "no-prefix");
+    expect((await unknown.call("get_account_status")).data.api_key.mode).toBe("unknown");
+    const live = await connect(routes, "no-prefix", undefined, undefined, "live");
+    expect((await live.call("get_account_status")).data.api_key.mode).toBe("live");
   });
 
   test("send_sms forwards the idempotency key and points at diagnose_sms", async () => {

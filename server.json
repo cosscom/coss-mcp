@@ -4,17 +4,12 @@
   "title": "coss.com",
   "description": "Look up and send email and SMS, diagnose delivery, and set up coss.com's products.",
   "websiteUrl": "https://coss.com/docs/mcp",
-  "repository": {
-    "url": "https://github.com/cosscom/coss",
-    "source": "github",
-    "subfolder": "packages/mcp"
-  },
-  "version": "0.7.0",
+  "version": "0.8.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "coss-mcp",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "transport": {
         "type": "stdio"
       },

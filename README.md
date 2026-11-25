@@ -1,5 +1,7 @@
 # coss-mcp
 
+[![cosscom/coss-mcp MCP server](https://glama.ai/mcp/servers/cosscom/coss-mcp/badges/score.svg)](https://glama.ai/mcp/servers/cosscom/coss-mcp)
+
 The [Model Context Protocol](https://modelcontextprotocol.io) server for [coss.com](https://coss.com). Your
 coding agent can ask "did the welcome email to jane@example.com get delivered?" (or "did the code we
 texted +14155550123 arrive?") and get the answer: the message, what happened to each recipient and why,
@@ -20,7 +22,7 @@ Published by coss.com's CI.
 | Variable | |
 | --- | --- |
 | `COSS_MCP_TOOLSETS` | Fewer tools: a comma-separated list of `email`, `marketing`, `inboxes`, `sms`, `verify`, `sign`, `forms`, `scheduling`, `webhooks`, `hooks`, `risk`, `subaccounts`, `log_drains`. Docs, `get_setup`, logs, `get_account_status` and `api_get` are always there. Default: every tool. |
-| `COSS_API_KEY` | A `coss_test_…` (development) or `coss_live_…` (production) key; the server sees that key's environment. Without one, a `coss_test_` key in the project's `.env.local` or `.env` is used (`npx coss-cli init` writes it). A `coss_live_` key in that file is never loaded. With no key at all, only the docs tools are available. |
+| `COSS_API_KEY` | A `coss_test_…` (development) or `coss_live_…` (production) key; the server sees that key's environment. Without one, a `coss_test_` key in the current repository's `.env.local` or `.env` is used (`npx coss-cli init` writes it); discovery never crosses that repository boundary or follows env-file symlinks. A `coss_live_` key in that file is never loaded. With no key at all, only the docs tools are available. |
 | `COSS_BASE_URL` | Another API origin, e.g. `http://localhost:3001`. Defaults to `https://api.coss.com`. |
 
 Configuration is read from the environment only, never from command-line arguments, which other

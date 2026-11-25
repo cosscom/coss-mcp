@@ -5,7 +5,7 @@
  * `coss webhooks add`): the file that already holds `COSS_API_KEY` or `COSS_WEBHOOK_SECRET`,
  * else `.env.local` in a Next.js project and `.env` otherwise.
  */
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, chmod, lstat, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 
 const NAMED = (name: string): RegExp =>
@@ -22,18 +22,53 @@ export type ProjectKey =
 
 async function readOptional(path: string): Promise<string | null> {
   try {
+    if ((await lstat(path)).isSymbolicLink()) return null;
     return await readFile(path, "utf8");
   } catch {
     return null;
   }
 }
 
+async function exists(path: string): Promise<boolean> {
+  return access(path).then(
+    () => true,
+    () => false,
+  );
+}
+
+/** The nearest repository root, else the nearest package root, else `dir` itself. */
+async function projectRoot(dir: string): Promise<string> {
+  let packageRoot: string | null = null;
+  for (let current = resolve(dir); ; current = dirname(current)) {
+    if (await exists(join(current, ".git"))) return current;
+    if (packageRoot === null && (await exists(join(current, "package.json"))))
+      packageRoot = current;
+    const parent = dirname(current);
+    if (parent === current) return packageRoot ?? resolve(dir);
+  }
+}
+
+async function writeCredentialFile(path: string, text: string): Promise<void> {
+  try {
+    const existing = await lstat(path);
+    if (existing.isSymbolicLink())
+      throw new Error(`Refusing to write credentials through ${path}.`);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, text, { mode: 0o600 });
+  await chmod(path, 0o600);
+}
+
 /**
- * Walks from `dir` upward. At each directory, `.env.local` is read before `.env`. The first
- * `COSS_API_KEY` wins: a `coss_test_` key is returned, and anything else (including `coss_live_`)
- * stops the walk so a parent project's key is not picked up after this one refused.
+ * Walks from `dir` to its repository/package boundary. At each directory, `.env.local` is read
+ * before `.env`. The first `COSS_API_KEY` wins: a `coss_test_` key is returned, and anything else
+ * (including `coss_live_`) stops the walk so a parent directory's key is not picked up after this
+ * one refused. Symlinked env files are ignored.
  */
 export async function readProjectApiKey(dir: string): Promise<ProjectKey> {
+  const root = await projectRoot(dir);
   let current = resolve(dir);
   for (;;) {
     for (const name of [".env.local", ".env"]) {
@@ -48,6 +83,7 @@ export async function readProjectApiKey(dir: string): Promise<ProjectKey> {
       }
       return { kind: "live", file: path };
     }
+    if (current === root) break;
     const parent = dirname(current);
     if (parent === current) break;
     current = parent;
@@ -89,8 +125,9 @@ interface EnvFile {
   text: string | null;
 }
 
-/** The env file `coss webhooks add` would write, walking up from `dir`. */
+/** The env file `coss webhooks add` would write, bounded to the current project. */
 async function projectEnvFile(dir: string): Promise<EnvFile> {
+  const root = await projectRoot(dir);
   let current = resolve(dir);
   for (;;) {
     for (const name of [".env.local", ".env"]) {
@@ -98,11 +135,11 @@ async function projectEnvFile(dir: string): Promise<EnvFile> {
       const text = await readOptional(path);
       if (text !== null && holdsCredential(text)) return { path, text };
     }
+    if (current === root) break;
     const parent = dirname(current);
     if (parent === current) break;
     current = parent;
   }
-  const root = resolve(dir);
   const path = join(root, (await isNextProject(root)) ? ".env.local" : ".env");
   return { path, text: await readOptional(path) };
 }
@@ -110,7 +147,7 @@ async function projectEnvFile(dir: string): Promise<EnvFile> {
 /**
  * Writes `COSS_WEBHOOK_SECRET` into the project env file. A different value already there is
  * replaced, so `coss listen` and `verifyWebhook` use the endpoint's secret. A new file is mode
- * 0600. `file` is relative to `dir`.
+ * 0600. Existing symlinks are refused. `file` is relative to `dir`.
  */
 export async function saveWebhookSecret(
   dir: string,
@@ -120,10 +157,7 @@ export async function saveWebhookSecret(
   const existing = file.text ? value(file.text, WEBHOOK_SECRET) : "";
   const next = setEnvVar(file.text ?? "", WEBHOOK_SECRET, secret);
   const wrote = next !== (file.text ?? "");
-  if (wrote) {
-    await mkdir(dirname(file.path), { recursive: true });
-    await writeFile(file.path, next, file.text === null ? { mode: 0o600 } : undefined);
-  }
+  await writeCredentialFile(file.path, next);
   return {
     file: relative(resolve(dir), file.path) || file.path,
     replaced: existing !== "" && existing !== secret,

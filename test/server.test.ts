@@ -451,6 +451,22 @@ describe("coss-mcp server", () => {
     expect(missing.isError).toBe(true);
   });
 
+  test("add_domain forwards the bounce subdomain to the API", async () => {
+    const { call, requests } = await connect({
+      "POST /v1/domains": {
+        object: "domain",
+        id: "dom_1",
+        mail_from_domain: "coss-bounce.acme.com",
+      },
+    });
+    const result = await call("add_domain", {
+      name: "acme.com",
+      mail_from_subdomain: "coss-bounce",
+    });
+    expect(result.data.domain.mail_from_domain).toBe("coss-bounce.acme.com");
+    expect(requests[0]?.body).toEqual({ name: "acme.com", mail_from_subdomain: "coss-bounce" });
+  });
+
   test("get_account_status reports what it could read and what it couldn't", async () => {
     const { call } = await connect({
       "GET /v1/environment": {

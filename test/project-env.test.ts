@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readProjectApiKey, saveWebhookSecret } from "../src/project-env.ts";
@@ -39,9 +39,31 @@ describe("readProjectApiKey", () => {
   });
 
   test("walks up to a development key", async () => {
-    const root = await tree({ ".env": 'export COSS_API_KEY="coss_test_up"\n' });
+    const root = await tree({
+      ".git/HEAD": "ref: refs/heads/main\n",
+      ".env": 'export COSS_API_KEY="coss_test_up"\n',
+    });
     const found = await readProjectApiKey(join(root, "apps", "web"));
     expect(found).toMatchObject({ kind: "test", apiKey: "coss_test_up" });
+  });
+
+  test("does not cross a nested repository boundary", async () => {
+    const root = await tree({
+      ".git/HEAD": "ref: refs/heads/main\n",
+      ".env": "COSS_API_KEY=coss_test_parent\n",
+      "untrusted/.git/HEAD": "ref: refs/heads/main\n",
+      "untrusted/package.json": "{}",
+    });
+    expect(await readProjectApiKey(join(root, "untrusted", "src"))).toEqual({ kind: "none" });
+  });
+
+  test("does not follow an env-file symlink across the project boundary", async () => {
+    const root = await tree({
+      ".env": "COSS_API_KEY=coss_test_parent\n",
+      "untrusted/.git/HEAD": "ref: refs/heads/main\n",
+    });
+    await symlink(join(root, ".env"), join(root, "untrusted", ".env"));
+    expect(await readProjectApiKey(join(root, "untrusted"))).toEqual({ kind: "none" });
   });
 
   test("none when no file has a key", async () => {
@@ -53,14 +75,17 @@ describe("readProjectApiKey", () => {
 describe("saveWebhookSecret", () => {
   test("appends to the file that already holds the key, replacing a different secret", async () => {
     const root = await tree({
+      ".git/HEAD": "ref: refs/heads/main\n",
       ".env": "COSS_API_KEY=coss_test_x\nCOSS_WEBHOOK_SECRET=whsec_old\n",
       "app/.gitkeep": "",
     });
+    await chmod(join(root, ".env"), 0o644);
     const saved = await saveWebhookSecret(join(root, "app"), "whsec_new$1");
     expect(saved).toEqual({ file: "../.env", replaced: true, wrote: true });
     expect(await readFile(join(root, ".env"), "utf8")).toBe(
       "COSS_API_KEY=coss_test_x\nCOSS_WEBHOOK_SECRET=whsec_new$1\n",
     );
+    expect((await stat(join(root, ".env"))).mode & 0o777).toBe(0o600);
   });
 
   test("creates .env.local mode 0600 in a Next.js project", async () => {

@@ -2,14 +2,19 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "com.coss/mcp",
   "title": "coss.com",
-  "description": "Look up and send email and SMS, diagnose delivery, and set up coss.com's products.",
+  "description": "Email, SMS, one-time codes, e-signatures, forms, scheduling, webhooks and risk checks from coss.com.",
+  "repository": {
+    "url": "https://github.com/cosscom/coss-mcp",
+    "source": "github",
+    "id": "1461680150"
+  },
   "websiteUrl": "https://coss.com/docs/mcp",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "coss-mcp",
-      "version": "0.8.0",
+      "version": "0.8.1",
       "transport": {
         "type": "stdio"
       },

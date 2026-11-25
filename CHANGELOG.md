@@ -1,5 +1,18 @@
 # coss-mcp
 
+## 0.8.1
+
+### Patch Changes
+
+- 665f906: Show the server's Glama listing and score in the README.
+- e7e276b: Link the public source mirror, cosscom/coss-mcp, from npm and the MCP registry, and describe every product the server covers in the registry entry.
+- 261c075: Keep discovered project credentials inside the current repository, ignore symlinked env files, and make credential files readable only by their owner.
+- 5b64440: Choose a custom bounce subdomain when adding a sending domain with the SDK, CLI, or MCP tool.
+- Updated dependencies [caeaa53]
+- Updated dependencies [86301e0]
+- Updated dependencies [5b64440]
+  - coss@0.13.1
+
 ## 0.8.0
 
 ### Minor Changes

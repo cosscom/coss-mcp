@@ -78,11 +78,20 @@ export function registerDomainTools(ctx: ToolContext): void {
       description:
         "Adds a domain to send from and returns the DNS records to create for it. Sending from it " +
         "with a live key works once it is verified.",
-      inputSchema: z.object({ name: z.string().describe("The domain, e.g. acme.com.") }),
+      inputSchema: z.object({
+        name: z.string().describe("The domain, e.g. acme.com."),
+        mail_from_subdomain: z
+          .string()
+          .optional()
+          .describe("Bounce subdomain label, e.g. coss-bounce. Defaults to send."),
+      }),
       annotations: WRITE,
     },
-    ({ name }) =>
-      respond(coss.domains.create({ name }), (domain) => ({ domain, help: RECORD_HELP })),
+    ({ name, mail_from_subdomain }) =>
+      respond(coss.domains.create({ name, mail_from_subdomain }), (domain) => ({
+        domain,
+        help: RECORD_HELP,
+      })),
   );
 
   server.registerTool(

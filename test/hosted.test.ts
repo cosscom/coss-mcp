@@ -230,6 +230,20 @@ describe("server.json", () => {
       url: "https://api.coss.com/mcp",
     });
   });
+
+  test("links the public mirror npm also names, within the registry's limits", () => {
+    const read = (file: string) =>
+      JSON.parse(readFileSync(join(import.meta.dir, "..", file), "utf8"));
+    const pkg = read("package.json");
+    const server = read("server.json");
+    // The registry rejects a description over 100 characters.
+    expect(server.description.length).toBeLessThanOrEqual(100);
+    expect(server.repository).toMatchObject({
+      url: "https://github.com/cosscom/coss-mcp",
+      source: "github",
+    });
+    expect(pkg.repository.url).toBe(`git+${server.repository.url}.git`);
+  });
 });
 
 describe("createHostedMcp", () => {
